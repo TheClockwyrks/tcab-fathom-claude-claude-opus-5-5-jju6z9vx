@@ -137,7 +137,10 @@ describe("poses", () => {
 
   it("accept a fixture maze exactly as given", async () => {
     const h = await boot();
-    const rows = fixtureMaze().map((r) => r.replace(/[gd]/g, "#"));
+    // A gate with no chamber behind it, and corridor where the den slots sit.
+    const rows = fixtureMaze().map((r, y) =>
+      y === 8 ? r.replace(/#/g, ".") : r.replace(/d/g, "#"),
+    );
     h.pose((d, s) => d.setMaze(s, rows));
     let s = h.snap();
     expect(s.tiles).toEqual(rows);

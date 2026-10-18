@@ -94,9 +94,9 @@ import {
 import { drawFrom } from "./random";
 
 /** How long the dive countdown holds, in ticks (2 s). */
-export const COUNTDOWN_TICKS = 240;
+const COUNTDOWN_TICKS = 240;
 /** How long the cleared interstitial holds, in ticks (2.5 s). */
-export const CLEARED_TICKS = 300;
+const CLEARED_TICKS = 300;
 /** How long the bloom art's fade beat plays after a flare ends, in seconds. */
 export const FLARE_FADE = 0.35;
 
@@ -106,7 +106,7 @@ const RAMP_RATE =
   (GLOAMFIN_CHASE_SPEED - GLOAMFIN_CORNER_SPEED) / GLOAMFIN_RAMP_TIME;
 
 /** A timer one tick further down, landing on exactly 0 rather than a residue. */
-export function countDown(seconds: number): number {
+function countDown(seconds: number): number {
   return seconds - TICK_DT <= EPS ? 0 : seconds - TICK_DT;
 }
 
@@ -147,7 +147,7 @@ export function plankRemaining(plankton: readonly string[]): number {
 }
 
 /** The kinds a depth's roster holds, in release order. */
-export function rosterFor(depth: number): PredatorKind[] {
+function rosterFor(depth: number): PredatorKind[] {
   const kinds = [...DEN_ORDER];
   const cap = DEN_ORDER.length * ROSTER_CAP;
   const extra = Math.min(depth, ROSTER_CAP_DEPTH) - 1;
@@ -239,7 +239,7 @@ export function layOutRoster(s: FathomState): void {
 }
 
 /** The arrangement an attempt starts from: a new maze, or after a lost life. */
-export function startAttempt(s: FathomState): void {
+function startAttempt(s: FathomState): void {
   const start = startTileOf(s.tiles);
   if (start) {
     s.forager.x = centerX(start.tx);
@@ -260,7 +260,7 @@ export function startAttempt(s: FathomState): void {
 }
 
 /** A fresh maze at the current depth: full plankton and unrevealed fog. */
-export function layOutMaze(s: FathomState): void {
+function layOutMaze(s: FathomState): void {
   s.tiles = generateMaze(drawFrom(s));
   s.plankton = s.tiles.map((r) =>
     r.replace(/./g, (c) => (c === "." ? "*" : "-")),
@@ -322,7 +322,7 @@ function along(b: Body): number {
   );
 }
 
-export function atCenter(b: Body): boolean {
+function atCenter(b: Body): boolean {
   const t = tileOf(b.x, b.y);
   return (
     Math.abs(b.x - centerX(t.tx)) < EPS && Math.abs(b.y - centerY(t.ty)) < EPS
@@ -437,7 +437,7 @@ function segmentPointDistance(
 }
 
 /** Whether ink blinds a hunter that sees: it stands in a cloud or one lies between. */
-export function inkBlinds(s: DeepReadonly<FathomState>, p: Body): boolean {
+function inkBlinds(s: DeepReadonly<FathomState>, p: Body): boolean {
   const f = s.forager;
   return s.inkClouds.some(
     (c) =>
@@ -698,7 +698,8 @@ function movePredator(s: FathomState, p: Predator, rand: () => number): void {
 }
 
 function denSwim(s: FathomState, p: Predator): void {
-  const exit = denExit(s.tiles);
+  // A layout with no den chamber holds its den-state predators out of play.
+  const exit = denTiles(s.tiles).length > 0 ? denExit(s.tiles) : null;
   const here = tileOf(p.x, p.y);
   if (!exit || !isDenPassable(s.tiles, here.tx, here.ty)) return;
   const field = distanceField(s.tiles, [exit], (x, y) =>
@@ -857,7 +858,7 @@ function stepPulses(s: FathomState, lit: boolean[]): void {
 }
 
 /** Lights the flooded corridor tiles and the rock that bounds them. */
-export function floodLight(
+function floodLight(
   rows: Rows,
   dist: readonly number[],
   reached: number,
@@ -884,7 +885,7 @@ export function floodLight(
 // ---- Light -------------------------------------------------------------------
 
 /** The tiles the forager's own light reaches, by straight line within V. */
-export function lightPocket(s: DeepReadonly<FathomState>): boolean[] {
+function lightPocket(s: DeepReadonly<FathomState>): boolean[] {
   const pocket = new Array<boolean>(GRID_COLS * GRID_ROWS).fill(false);
   const f = s.forager;
   const v = visionRadius(s.brightness);

@@ -2,7 +2,7 @@
 // in FathomState, so a run replays exactly from the state it started from.
 
 /** One mulberry32 draw: the value in [0, 1) and the generator's next state. */
-export function nextRandom(seed: number): [number, number] {
+function nextRandom(seed: number): [number, number] {
   const next = (seed + 0x6d2b79f5) >>> 0;
   let t = next;
   t = Math.imul(t ^ (t >>> 15), t | 1);

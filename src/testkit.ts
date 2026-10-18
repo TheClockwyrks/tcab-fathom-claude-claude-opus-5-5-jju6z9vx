@@ -4,7 +4,7 @@
 
 import { ConstantClock, createEngine } from "@clockwyrks/simple-2d";
 import type { Engine } from "@clockwyrks/simple-2d";
-import { createCanvas } from "@napi-rs/canvas";
+import { createCanvas, type Canvas } from "@napi-rs/canvas";
 import { LAYOUT, STAGE_H, STAGE_W, TICK_HZ } from "./constants";
 import {
   BACKGROUND,
@@ -37,6 +37,8 @@ export interface Harness {
     y: number,
   ): void;
   readonly cues: string[];
+  /** The native canvas the engine draws into. */
+  readonly canvas: Canvas;
 }
 
 /**
@@ -136,5 +138,6 @@ export async function boot(): Promise<Harness> {
       );
     },
     cues,
+    canvas,
   };
 }

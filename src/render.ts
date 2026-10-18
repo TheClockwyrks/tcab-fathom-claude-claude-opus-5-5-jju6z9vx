@@ -203,6 +203,15 @@ function terrain(ctx: Ctx, s: View, tx: number, ty: number): void {
   }
 }
 
+/** Cool light on open water, so a lit corridor reads apart from the rock. */
+function wash(ctx: Ctx, tx: number, ty: number, alpha: number): void {
+  ctx.save();
+  ctx.globalCompositeOperation = "lighter";
+  ctx.fillStyle = `rgba(60, 150, 190, ${alpha})`;
+  ctx.fillRect(tileLeft(tx), tileTop(ty), TILE, TILE);
+  ctx.restore();
+}
+
 function fogTile(ctx: Ctx, s: View, tx: number, ty: number): void {
   const img = sprite(s.art.tiles, FOG_FRAME);
   if (img) ctx.drawImage(img, tileLeft(tx), tileTop(ty), TILE, TILE);
@@ -241,6 +250,7 @@ function drawMaze(ctx: Ctx, s: View, t: number): void {
   }
   const f = s.forager;
   const r = windowRadius(s.brightness);
+  const v = visionRadius(s.brightness);
   ctx.save();
   clipCircle(ctx, f.x, f.y, r);
   const span = Math.ceil(r / TILE) + 1;
@@ -259,9 +269,14 @@ function drawMaze(ctx: Ctx, s: View, t: number): void {
       const vis = s.visibility[ty][tx];
       if (vis === "u") continue;
       terrain(ctx, s, tx, ty);
+      const water = tileAt(s.tiles, tx, ty) !== "#";
       if (vis === "r") {
         ctx.fillStyle = COLOR.dim;
         ctx.fillRect(tileLeft(tx), tileTop(ty), TILE, TILE);
+        if (water) wash(ctx, tx, ty, 0.05);
+      } else if (water) {
+        const near = Math.hypot(centerX(tx) - f.x, centerY(ty) - f.y);
+        wash(ctx, tx, ty, 0.08 + 0.16 * Math.max(0, 1 - near / (v + TILE)));
       }
       if (s.plankton[ty][tx] === "*") plankton(ctx, tx, ty, vis === "l", t);
     }
@@ -474,24 +489,60 @@ function drawAlerts(ctx: Ctx, s: View): void {
   }
 }
 
-/** Each wavefront as a crest flowing through the corridors it floods. */
+/**
+ * Each wavefront as a crest flowing through the corridors it floods: a soft
+ * wake over the tiles it has just passed, and a bright bar standing across
+ * every corridor at the front's exact position, so it bends round corners and
+ * splits at junctions the way the reveal does.
+ */
 function drawPulses(ctx: Ctx, s: View): void {
-  const trail = 1.8;
+  const trail = 2.2;
   ctx.save();
   ctx.globalCompositeOperation = "lighter";
+  ctx.lineCap = "round";
   for (const p of s.pulses) {
     const rgb = TINTS[p.tint];
+    const at = (tx: number, ty: number): number =>
+      tx < 0 || ty < 0 || tx >= GRID_COLS || ty >= GRID_ROWS
+        ? -1
+        : p.dist[index(tx, ty)];
     for (let ty = 0; ty < GRID_ROWS; ty++) {
       for (let tx = 0; tx < GRID_COLS; tx++) {
-        const d = p.dist[index(tx, ty)];
-        if (d < 0 || d > p.range || d > p.front || p.front - d > trail)
-          continue;
-        const k = 1 - (p.front - d) / trail;
+        const d = at(tx, ty);
+        if (d < 0 || d > p.range || d > p.front) continue;
         const x = centerX(tx);
         const y = centerY(ty);
-        ctx.fillStyle = `rgba(${rgb}, ${0.32 * k})`;
-        ctx.fillRect(x - TILE / 2 + 2, y - TILE / 2 + 2, TILE - 4, TILE - 4);
-        glow(ctx, x, y, TILE * 0.8, rgb, 0.5 * k);
+        const behind = p.front - d;
+        if (behind < trail) {
+          const k = 1 - behind / trail;
+          ctx.fillStyle = `rgba(${rgb}, ${0.2 * k})`;
+          ctx.fillRect(x - TILE / 2, y - TILE / 2, TILE, TILE);
+        }
+        if (behind >= 1) continue;
+        const ahead = [
+          [1, 0],
+          [-1, 0],
+          [0, 1],
+          [0, -1],
+        ].filter(
+          ([dx, dy]) => at(tx + dx, ty + dy) === d + 1 && d + 1 <= p.range,
+        );
+        const fade = Math.min(1, (p.range + 1 - p.front) * 2);
+        for (const [dx, dy] of ahead) {
+          const cx = x + dx * behind * TILE;
+          const cy = y + dy * behind * TILE;
+          glow(ctx, cx, cy, TILE * 0.75, rgb, 0.55 * fade);
+          ctx.strokeStyle = `rgba(${rgb}, ${0.95 * fade})`;
+          ctx.lineWidth = 4;
+          ctx.beginPath();
+          ctx.moveTo(cx - dy * TILE * 0.38, cy - dx * TILE * 0.38);
+          ctx.lineTo(cx + dy * TILE * 0.38, cy + dx * TILE * 0.38);
+          ctx.stroke();
+        }
+        if (ahead.length === 0 && behind < 0.5) {
+          // The front meets rock or its range here and breaks against it.
+          glow(ctx, x, y, TILE * 0.7, rgb, 0.6 * (1 - behind * 2));
+        }
       }
     }
   }
@@ -710,7 +761,8 @@ const HOWTO: readonly (readonly [string, string])[] = [
     "sonar pulse: floods nearby corridors and shows hunters it touches",
   ],
   ["SHIFT", "ink cloud: blinds any hunter that hunts by sight"],
-  ["ESC / P   M", "pause          mute"],
+  ["ESC / P", "pause, and resume"],
+  ["M", "sound on or off"],
   ["READING THE DARK", ""],
   [
     "",

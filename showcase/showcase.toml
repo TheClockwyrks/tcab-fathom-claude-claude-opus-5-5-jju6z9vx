@@ -1,0 +1,15 @@
+[[media]]
+file = "hunt.json.gz"
+name = "Grazing a junction as a Gloamfin closes in"
+
+[[media]]
+file = "flare.json.gz"
+name = "A Flarefish blooms across the dark"
+
+[[media]]
+file = "hunt.png"
+name = "A sonar pulse floods the corridors"
+
+[[media]]
+file = "title.png"
+name = "The title screen"

@@ -4,7 +4,7 @@
 import type { CueSpec, InitApi } from "@clockwyrks/simple-2d";
 import { CUES, type CueName } from "./constants";
 
-export const CUE_SPECS: Readonly<Record<CueName, CueSpec>> = {
+const CUE_SPECS: Readonly<Record<CueName, CueSpec>> = {
   [CUES.eat]: {
     wave: "sine",
     freq: 920,
